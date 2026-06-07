@@ -16,6 +16,8 @@ python run.py --store "악어떡볶이" --save               # 리포트를 txt 
 ```
 
 # Streamlit 실행
+<img width="2522" height="1204" alt="image" src="https://github.com/user-attachments/assets/91cd663f-88ff-4610-bede-a35f4ba5b6d4" />
+
 ```
 # 패키지 설치
 pip install streamlit
