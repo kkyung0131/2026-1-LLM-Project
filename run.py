@@ -74,7 +74,14 @@ def main():
 
     df                                          = pd.read_csv(DF_PATH)
     docs, doc_title_embeddings, doc_body_embeddings = load_documents(JSON_PATH)
-
+    use_cols = [
+        "id", "ym_quarter", "big_ind", "dong", "title", "category",
+        "score", "score_taste", "score_price", "score_service",
+        "review_cnt", "reviews",
+    ]
+    store_df         = df[use_cols].drop_duplicates(subset=["id"]).copy()
+    review_threshold = store_df.groupby("big_ind")["review_cnt"].quantile(0.75)
+    
     if args.store not in df["title"].values:
         print(f"[오류] '{args.store}' 가맹점을 찾을 수 없습니다.")
         print("등록된 가맹점 예시:", df["title"].unique()[:5].tolist())
@@ -109,6 +116,8 @@ def main():
         doc_title_embeddings=doc_title_embeddings,
         doc_body_embeddings=doc_body_embeddings,
         embedding_model=embedding_model,
+        store_df=store_df,                   # ← 추가
+        review_threshold=review_threshold,   # ← 추가
         owner_input=args.owner,
         top_k_per_query=args.top_k,
         final_top_k=args.final_k,
@@ -122,8 +131,14 @@ def main():
         print(result["analysis"])
 
         print_section("생성된 검색 쿼리")
+        print("  [정형]")
         for i, q in enumerate(result["query_groups"]["정형"], 1):
             print(f"  {i}. {q}")
+
+        if result["query_groups"].get("리뷰"):
+            print("  [리뷰]")
+            for i, q in enumerate(result["query_groups"]["리뷰"], 1):
+                print(f"  {i}. {q}")
 
         print_section("참고 문서")
         for doc in result["retrieved_documents"]:

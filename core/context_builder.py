@@ -740,3 +740,74 @@ def build_context(store_name: str, df: pd.DataFrame) -> str:
         district_result["full_text"],
         reputation_result["current_text"],
     ])
+
+# ============================================================
+# 7. 리뷰 컨텍스트
+# ============================================================
+
+def shorten_reviews(text: str, max_reviews: int = 10, max_chars: int = 2000) -> str:
+    """리뷰 텍스트를 최대 개수/글자 수로 제한"""
+    text = str(text)
+    review_list = text.split("|")
+    selected    = review_list[:max_reviews]
+    result      = " | ".join(selected)
+    if len(result) > max_chars:
+        result = result[:max_chars] + "\n... [리뷰가 길어 일부 생략됨]"
+    return result
+
+
+def build_review_context(
+    store_name: str,
+    store_df: pd.DataFrame,
+    review_threshold: pd.Series,
+) -> str:
+    """
+    가게명 → 내 가게 리뷰 + 동일 업종/상권 top5 리뷰 컨텍스트 반환
+
+    Args:
+        store_name       : 가맹점 title
+        store_df         : 리뷰 관련 컬럼만 추린 가게별 단일 행 DataFrame
+                           (drop_duplicates(subset=["id"]) 적용된 상태)
+        review_threshold : 업종별 리뷰 수 75% 분위수 (groupby("big_ind")["review_cnt"].quantile(0.75))
+    Returns:
+        LLM에 전달할 리뷰 컨텍스트 문자열
+    """
+    my_store   = store_df[store_df["title"] == store_name].iloc[0]
+
+    same_group = store_df[
+        (store_df["big_ind"] == my_store["big_ind"]) &
+        (store_df["dong"]    == my_store["dong"]) &
+        (store_df["id"]      != my_store["id"])
+    ].copy()
+
+    threshold = review_threshold.get(my_store["big_ind"], 0)
+    candidate = same_group[same_group["review_cnt"] >= threshold].copy()
+    top5      = candidate.sort_values(
+        by=["score", "review_cnt"], ascending=False
+    ).head(5)
+
+    context = f"""[내 가게 정보]
+- 가게명: {my_store['title']}
+- 업종: {my_store['big_ind']}
+- 상권(동): {my_store['dong']}
+- 평점: {my_store['score']}  (맛 {my_store['score_taste']} / 가격 {my_store['score_price']} / 서비스 {my_store['score_service']})
+- 리뷰 수: {my_store['review_cnt']}
+
+[내 가게 리뷰]
+{shorten_reviews(my_store['reviews'])}
+"""
+
+    if top5.empty:
+        context += "\n[비교 가게]\n해당 업종/상권에 비교 대상 가게가 없습니다.\n"
+    else:
+        context += "\n[동일 업종/상권 리뷰 우수 가게 (top5)]\n"
+        for idx, (_, row) in enumerate(top5.iterrows(), 1):
+            context += f"""
+--- 비교 가게 {idx}: {row['title']} ---
+- 평점: {row['score']}  (맛 {row['score_taste']} / 가격 {row['score_price']} / 서비스 {row['score_service']})
+- 리뷰 수: {row['review_cnt']}
+- 리뷰:
+{shorten_reviews(row['reviews'])}
+"""
+
+    return context
