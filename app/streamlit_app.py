@@ -308,6 +308,7 @@ with st.sidebar:
     with st.expander("⚙️ 고급 설정", expanded=False):
         top_k   = st.slider("쿼리당 검색 문서 수", 1, 5, 3)   # min, max, default
         final_k = st.slider("최종 참고 문서 수",   3, 20, 10)  # min, max, default
+
     
     st.markdown('<hr style="margin: 6px 0; border: none; border-top: 1px solid rgba(255,255,255,0.3);">', unsafe_allow_html=True)
     st.markdown('<div class="run-btn">', unsafe_allow_html=True)
