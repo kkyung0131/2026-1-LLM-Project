@@ -34,6 +34,7 @@ def get_llm_client(base_url: str = None, api_key: str = None) -> OpenAI:
     return OpenAI(
         base_url=base_url or os.getenv("OPENAI_BASE_URL"),
         api_key=api_key  or os.getenv("OPENAI_API_KEY"),
+        timeout=300,  # ← 추가 (초 단위, 5분)
     )
 
 
