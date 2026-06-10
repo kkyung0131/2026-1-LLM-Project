@@ -34,7 +34,6 @@ def get_llm_client(base_url: str = None, api_key: str = None) -> OpenAI:
     return OpenAI(
         base_url=base_url or os.getenv("OPENAI_BASE_URL"),
         api_key=api_key  or os.getenv("OPENAI_API_KEY"),
-        timeout=300,  # ← 추가 (초 단위, 5분)
     )
 
 
@@ -46,7 +45,6 @@ def generate_rag_queries(
     store_name: str,
     df: pd.DataFrame,
     client: OpenAI,
-    owner_input: str = None,
     stream_callback=None,
 ) -> dict:
     """
@@ -69,8 +67,6 @@ def generate_rag_queries(
         }
     """
     context = build_context(store_name, df)
-    if owner_input:
-        context += f"\n\n[사장님 관심 사항]\n{owner_input}"
 
     messages = [
         {"role": "system", "content": QUERY_SYSTEM_PROMPT},
@@ -121,7 +117,6 @@ def generate_review_rag_queries(
     store_df: pd.DataFrame,
     review_threshold: pd.Series,
     client: OpenAI,
-    owner_input: str = None,
     stream_callback=None,
 ) -> dict:
     """
@@ -146,8 +141,6 @@ def generate_review_rag_queries(
     """
 
     context = build_review_context(store_name, store_df, review_threshold)
-    if owner_input:
-        context += f"\n\n[사장님 관심 사항]\n{owner_input}"
 
     messages = [
         {"role": "system", "content": REVIEW_QUERY_SYSTEM_PROMPT},
